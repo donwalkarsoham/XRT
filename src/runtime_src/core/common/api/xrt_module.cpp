@@ -949,7 +949,14 @@ class module_elf : public module_impl
         throw std::runtime_error("index pointed by sub kernel doesn't have kernel entry\n");
 
       // demangle the string and extract kernel name, args from it
+
+#if 1
+      std::cout << "Mangled  name: " << kname << std::endl;
+#endif
       kname = demangle(kname);
+#if 1
+      std::cout << "Demangled kname: " << kname << std::endl;
+#endif
 
       std::string kernel_name;
       size_t pos = kname.find('(');
