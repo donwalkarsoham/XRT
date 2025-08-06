@@ -425,6 +425,7 @@ generate_key_string(const std::string& argument_name, xrt_core::patcher::buf_typ
   return argument_name + buf_string;
 }
 
+#if 0
 static std::string
 demangle(const std::string& mangled_name)
 {
@@ -445,6 +446,67 @@ demangle(const std::string& mangled_name)
   return demangled_name.get();
 #endif
 }
+#endif
+
+// Basic Itanium ABI type decoding
+std::string
+demangle_type(const std::string& s, size_t& idx)
+{
+  if (idx >= s.size()) return "?";
+
+  char c = s[idx++];
+  if (c == 'P') {
+      return demangle_type(s, idx) + "*";
+  }
+
+  switch (c) {
+      case 'v': return "void";
+      case 'i': return "int";
+      case 'c': return "char";
+      case 'f': return "float";
+      case 'd': return "double";
+      case 'b': return "bool";
+      case 's': return "short";
+      case 'l': return "long";
+      default:  return "unknown";
+  }
+}
+
+// Parse mangled name in Itanium ABI style: _Z<length><name><types>
+std::string
+demangle(const std::string& mangled)
+{
+  if (mangled.size() < 3 || mangled.substr(0, 2) != "_Z") {
+      return "Not a mangled name";
+  }
+
+  size_t idx = 2;
+  size_t len = 0;
+
+  // Extract function name length
+  while (idx < mangled.size() && std::isdigit(mangled[idx])) {
+      len = len * 10 + (mangled[idx++] - '0');
+  }
+
+  if (idx + len > mangled.size()) return "Invalid mangled name";
+
+  std::string name = mangled.substr(idx, len);
+  idx += len;
+
+  std::vector<std::string> args;
+  while (idx < mangled.size()) {
+      args.push_back(demangle_type(mangled, idx));
+  }
+
+  std::string result = name + "(";
+  for (size_t i = 0; i < args.size(); ++i) {
+      if (i > 0) result += ", ";
+      result += args[i];
+  }
+  result += ")";
+  return result;
+}
+
 
 // checks if ELF has .group sections
 static bool
